@@ -19,5 +19,5 @@ def Median_filtering(image,window_size):   #image为传入灰度图像，window_
             del med_arry[:]
     # print("结束")
     Image.fromarray(np.asarray(img)).save('tmp.png')
-imgl=Image.open('disparity_map_l.jpg').convert('L')
-Median_filtering(np.asarray(imgl),3)
+imgl=Image.open('disparity_map.jpg').convert('L')
+Median_filtering(np.asarray(imgl),5)

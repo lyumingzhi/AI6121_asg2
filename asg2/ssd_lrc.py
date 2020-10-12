@@ -1,6 +1,6 @@
 import numpy as np 
 from PIL import Image
-def rank_transform(img,w_size,K=18):
+def rank_transform(img,w_size,K=8):
 
     w_boundary=int(w_size/2)
     transformed_img=np.zeros(img.shape,np.uint8)
@@ -15,7 +15,7 @@ def rank_transform(img,w_size,K=18):
                     rank+=min(1,max(0,(window[u,v]-median)/K))
             transformed_img[i,j]=int(rank*w_size_adjust)
     return transformed_img
-def LRC(filenamel,filenamer,kernel_size,max_disparity):
+def LRC(filenamel,filenamer,kernel_size,max_disparity,w_size):
     imgl=Image.open(filenamel).convert('L')
     imgr=Image.open(filenamer).convert('L')
     imgl,imgr=np.asarray(imgl),np.asarray(imgr)
@@ -28,22 +28,33 @@ def LRC(filenamel,filenamer,kernel_size,max_disparity):
     
     offset_adjust = 255 / max_disparity
     # imgl=rank_transform(imgl,5)
-    # Image.fromarray(np.asarray(imgl)).save('imgl1.jpg')
+    # Image.fromarray(np.asarray(imgl)).save('0imgl2.jpg')
     # imgr=rank_transform(imgr,5)
-    # Image.fromarray(np.asarray(imgr)).save('imgr1.jpg')
+    # Image.fromarray(np.asarray(imgr)).save('0imgr2.jpg')
     # exit()
-    dml=ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,1,0)
-    dmr=ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,0,1)
-    Image.fromarray(np.asarray(dmr*offset_adjust,np.uint8)).save('disparity_map_r.jpg')
-    Image.fromarray(np.asarray(dml*offset_adjust,np.uint8)).save('disparity_map_l.jpg')
-    disparity_map=np.zeros(imgl.shape,np.uint8)
-    exit()
+    
+    
+    # dml=ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,1,0).astype('int')
+    # dmr=ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,0,1).astype('int')
+    # Image.fromarray(np.asarray(dmr*offset_adjust,np.uint8)).save('disparity_map_r.jpg')
+    # Image.fromarray(np.asarray(dml*offset_adjust,np.uint8)).save('disparity_map_l.jpg')
+    # Image.fromarray(np.asarray(dmr,np.uint8)).save('raw_disparity_map_r.jpg')
+    # Image.fromarray(np.asarray(dml,np.uint8)).save('raw_disparity_map_l.jpg')
+    
+    # exit()
+    w_boundary=int(w_size/2)
+    disparity_map=np.zeros(imgl.shape)
+    dml=Image.open('raw_disparity_map_l.jpg').convert('L')
+    dmr=Image.open('raw_disparity_map_r.jpg').convert('L')
+    dml,dmr=np.asarray(dml,np.int),np.asarray(dmr,np.int)
     for i in range(dml.shape[0]):
         for j in range(dml.shape[1]):
-            if abs(dml[i,j]-dml[i,j-dml[i,j]])>6:
-                disparity_map[i][j]=np.median(dml[max(0,i-w_boundary):min(dml.shape[0],i+w_boundary),max(0,j-w_boundary):min(dml.shape[1],j+w_boundary)])
+            if abs(dml[i,j]-dmr[i,j-dml[i,j]])>6 and j-dml[i,j]>=0:
+                print(dml[i,j],dmr[i,j-dml[i,j]])
+                dml[i][j]=np.median(dml[max(0,i-w_boundary):min(dml.shape[0],i+w_boundary),max(0,j-w_boundary):min(dml.shape[1],j+w_boundary)])
     # disparity_map*=offset_adjust
-    Image.fromarray(np.asarray(dml*offset_adjust,np.uint8)).save('disparity_map.jpg')
+    disparity_map=dml
+    Image.fromarray(np.asarray(disparity_map*offset_adjust,np.uint8)).save('disparity_map.jpg')
 def ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,lmode,rmode):
     disparity_map=np.zeros(imgl.shape,np.uint8)
 
@@ -67,8 +78,8 @@ def ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,lmode,rmode):
                             ssd_tmp=int(imgl[x+u,y+v])-int(imgr[x+u,y+v-disparity*lmode])
                         else:
                             ssd_tmp=int(imgl[x+u,y+v+disparity if y+v+disparity<imgl.shape[1] else y+v+disparity- imgl.shape[1]])-int(imgr[x+u,y+v])
-                        # ssd+=ssd_tmp*ssd_tmp
-                        ssd+=abs(ssd_tmp)
+                        ssd+=ssd_tmp*ssd_tmp
+                        # ssd+=abs(ssd_tmp)
                 if ssd<loss:
                     loss=ssd
                     best_disparity=disparity
@@ -86,6 +97,6 @@ def ssd(imgl,imgr,offset_adjust,kernel_boundary,max_disparity,lmode,rmode):
     print(disparity_map[0],type(disparity_map))
     Image.fromarray(np.asarray(disparity_map)).save('disparity_map.jpg')
 
-LRC('xid-14489712_1.jpg','xid-14489713_1.jpg',6,20)
-# LRC('imgl1.jpg','imgr1.jpg',11,30)
-
+# LRC('xid-14489710_1.jpg','xid-14489711_1.jpg',11,30,35)
+# LRC('tmpl.png','tmpr.png',11,30,35)
+LRC('0imgl2.jpg','0imgr2.jpg',11,30,35)
